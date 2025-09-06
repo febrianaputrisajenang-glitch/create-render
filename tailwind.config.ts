@@ -64,6 +64,11 @@ export default {
         grid: "hsl(var(--grid-color))",
         selection: "hsl(var(--selection))",
         hover: "hsl(var(--hover))",
+        // Camera and Material colors
+        "camera-path": "hsl(var(--camera-path))",
+        keyframe: "hsl(var(--keyframe))",
+        "texture-bg": "hsl(var(--texture-bg))",
+        "color-swatch": "hsl(var(--color-swatch))",
       },
       backgroundImage: {
         'gradient-primary': 'var(--gradient-primary)',
