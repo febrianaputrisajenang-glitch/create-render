@@ -16,14 +16,17 @@ import {
   Upload,
   Home,
   Grid3X3,
-  Eye
+  Eye,
+  Trees,
+  Mountain
 } from "lucide-react"
 import { Link } from "react-router-dom"
 import * as THREE from 'three'
 import CameraControls, { CameraKeyframe } from './CameraControls'
 import MaterialEditor, { MaterialProperties } from './MaterialEditor'
+import SkyControls, { SkySettings } from './SkyControls'
 
-type ObjectType = 'cube' | 'sphere' | 'cylinder' | 'cone' | 'torus' | 'plane'
+type ObjectType = 'cube' | 'sphere' | 'cylinder' | 'cone' | 'torus' | 'plane' | 'tree' | 'ground'
 type TransformMode = 'translate' | 'rotate' | 'scale'
 
 interface SceneObject {
@@ -87,11 +90,76 @@ function SceneObject({
         return <torusGeometry args={[0.4, 0.2, 16, 100]} />
       case 'plane':
         return <planeGeometry args={[1, 1]} />
+      case 'tree':
+        // Simple tree made of cylinder trunk + cone leaves
+        return (
+          <>
+            <group>
+              <mesh position={[0, -0.3, 0]}>
+                <cylinderGeometry args={[0.1, 0.15, 0.6, 8]} />
+                <meshStandardMaterial color="#8B4513" />
+              </mesh>
+              <mesh position={[0, 0.2, 0]}>
+                <coneGeometry args={[0.4, 0.8, 8]} />
+                <meshStandardMaterial color="#228B22" />
+              </mesh>
+            </group>
+          </>
+        )
+      case 'ground':
+        return <planeGeometry args={[10, 10, 32, 32]} />
       default:
         return <boxGeometry args={[1, 1, 1]} />
     }
   }
   
+  // Special rendering for complex objects
+  if (object.type === 'tree') {
+    return (
+      <group
+        ref={actualMeshRef as any}
+        position={object.position}
+        rotation={object.rotation}
+        scale={object.scale}
+        onClick={onSelect}
+      >
+        {/* Trunk */}
+        <mesh position={[0, -0.3, 0]}>
+          <cylinderGeometry args={[0.1, 0.15, 0.6, 8]} />
+          <meshStandardMaterial color="#8B4513" wireframe={isSelected} />
+        </mesh>
+        {/* Leaves */}
+        <mesh position={[0, 0.2, 0]}>
+          <coneGeometry args={[0.4, 0.8, 8]} />
+          <meshStandardMaterial color="#228B22" wireframe={isSelected} />
+        </mesh>
+      </group>
+    )
+  }
+
+  if (object.type === 'ground') {
+    return (
+      <mesh
+        ref={actualMeshRef}
+        position={object.position}
+        rotation={[-Math.PI / 2, 0, 0]} // Rotate to be horizontal
+        scale={object.scale}
+        onClick={onSelect}
+      >
+        <planeGeometry args={[10, 10, 32, 32]} />
+        <meshStandardMaterial 
+          color={object.material.color || '#8B7355'}
+          metalness={object.material.metalness}
+          roughness={object.material.roughness || 0.9}
+          emissive={object.material.emissive}
+          emissiveIntensity={object.material.emissiveIntensity}
+          map={texture}
+          wireframe={isSelected}
+        />
+      </mesh>
+    )
+  }
+
   return (
     <mesh
       ref={actualMeshRef}
@@ -190,6 +258,82 @@ function CameraAnimator({
   return null
 }
 
+function SkyEnvironment({ skySettings }: { skySettings: SkySettings }) {
+  const { scene } = useThree()
+  
+  useEffect(() => {
+    // Set background color based on sky preset
+    const skyColors = {
+      day: '#87CEEB',
+      night: '#191970', 
+      sunset: '#FF6347',
+      cloudy: '#708090',
+      rainy: '#2F4F4F',
+      orange: '#FF4500'
+    }
+    
+    scene.background = new THREE.Color(skyColors[skySettings.preset])
+    scene.fog = new THREE.Fog(skyColors[skySettings.preset], 10, 50 * (1 + skySettings.fogDensity * 10))
+  }, [skySettings, scene])
+
+  const getLighting = () => {
+    switch (skySettings.preset) {
+      case 'day':
+        return (
+          <>
+            <ambientLight intensity={0.6 * skySettings.intensity} />
+            <directionalLight position={[10, 10, 5]} intensity={1.2 * skySettings.intensity} color="#ffffff" />
+          </>
+        )
+      case 'night':
+        return (
+          <>
+            <ambientLight intensity={0.2 * skySettings.intensity} color="#4169E1" />
+            <directionalLight position={[10, 10, 5]} intensity={0.3 * skySettings.intensity} color="#C0C0C0" />
+            <pointLight position={[0, 5, 0]} intensity={0.8 * skySettings.intensity} color="#FFD700" />
+          </>
+        )
+      case 'sunset':
+        return (
+          <>
+            <ambientLight intensity={0.4 * skySettings.intensity} color="#FF8C00" />
+            <directionalLight position={[10, 2, 5]} intensity={1 * skySettings.intensity} color="#FF6347" />
+          </>
+        )
+      case 'cloudy':
+        return (
+          <>
+            <ambientLight intensity={0.5 * skySettings.intensity} color="#D3D3D3" />
+            <directionalLight position={[10, 10, 5]} intensity={0.6 * skySettings.intensity} color="#F5F5F5" />
+          </>
+        )
+      case 'rainy':
+        return (
+          <>
+            <ambientLight intensity={0.3 * skySettings.intensity} color="#778899" />
+            <directionalLight position={[10, 10, 5]} intensity={0.4 * skySettings.intensity} color="#B0C4DE" />
+          </>
+        )
+      case 'orange':
+        return (
+          <>
+            <ambientLight intensity={0.5 * skySettings.intensity} color="#FF4500" />
+            <directionalLight position={[10, 10, 5]} intensity={1 * skySettings.intensity} color="#FF8C00" />
+          </>
+        )
+      default:
+        return (
+          <>
+            <ambientLight intensity={0.4} />
+            <directionalLight position={[10, 10, 5]} intensity={1} />
+          </>
+        )
+    }
+  }
+
+  return <>{getLighting()}</>
+}
+
 function Viewport({ 
   objects, 
   selectedObjectId, 
@@ -199,7 +343,8 @@ function Viewport({
   keyframes,
   isPlaying,
   onAnimationComplete,
-  onCameraChange
+  onCameraChange,
+  skySettings
 }: {
   objects: SceneObject[]
   selectedObjectId: string | null
@@ -210,6 +355,7 @@ function Viewport({
   isPlaying: boolean
   onAnimationComplete: () => void
   onCameraChange: (position: [number, number, number], target: [number, number, number]) => void
+  skySettings: SkySettings
 }) {
   const selectedObject = objects.find(obj => obj.id === selectedObjectId)
   const selectedMeshRef = useRef<THREE.Mesh>(null)
@@ -221,9 +367,7 @@ function Viewport({
         camera={{ position: [5, 5, 5], fov: 50 }}
         onPointerMissed={() => onSelectObject(null)}
       >
-        <ambientLight intensity={0.4} />
-        <directionalLight position={[10, 10, 5]} intensity={1} />
-        <pointLight position={[-10, -10, -5]} intensity={0.3} />
+        <SkyEnvironment skySettings={skySettings} />
         
         <Grid 
           args={[10, 10]} 
@@ -311,6 +455,13 @@ export default function Editor3D() {
     emissive: '#000000',
     emissiveIntensity: 0
   })
+
+  // Sky state
+  const [skySettings, setSkySettings] = useState<SkySettings>({
+    preset: 'day',
+    intensity: 1,
+    fogDensity: 0.02
+  })
   
   const addObject = (type: ObjectType) => {
     const id = Date.now().toString()
@@ -349,6 +500,10 @@ export default function Editor3D() {
     setKeyframes(prev => prev.filter(kf => kf.id !== id))
   }, [])
 
+  const handleReorderKeyframes = useCallback((newKeyframes: CameraKeyframe[]) => {
+    setKeyframes(newKeyframes)
+  }, [])
+
   const handlePlayAnimation = useCallback(() => {
     if (keyframes.length >= 2) {
       setIsAnimating(true)
@@ -382,6 +537,11 @@ export default function Editor3D() {
       ))
     }
   }, [selectedObjectId])
+
+  // Sky functions
+  const handleSkyChange = useCallback((newSkySettings: SkySettings) => {
+    setSkySettings(newSkySettings)
+  }, [])
   
   const selectedObject = objects.find(obj => obj.id === selectedObjectId)
   
@@ -518,6 +678,24 @@ export default function Editor3D() {
                 <Grid3X3 className="h-4 w-4 mr-2" />
                 Plane
               </Button>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="w-full justify-start"
+                onClick={() => addObject('tree')}
+              >
+                <Trees className="h-4 w-4 mr-2" />
+                Tree
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="w-full justify-start"
+                onClick={() => addObject('ground')}
+              >
+                <Mountain className="h-4 w-4 mr-2" />
+                Ground
+              </Button>
             </div>
           </div>
           
@@ -528,11 +706,18 @@ export default function Editor3D() {
             onPlayAnimation={handlePlayAnimation}
             onStopAnimation={handleStopAnimation}
             onJumpToKeyframe={handleJumpToKeyframe}
+            onReorderKeyframes={handleReorderKeyframes}
             keyframes={keyframes}
             isPlaying={isAnimating}
             currentCameraPosition={currentCameraPosition}
             currentCameraTarget={currentCameraTarget}
             onCameraChange={handleCameraChange}
+          />
+
+          {/* Sky Controls */}
+          <SkyControls
+            skySettings={skySettings}
+            onSkyChange={handleSkyChange}
           />
 
           {/* Actions */}
@@ -563,6 +748,7 @@ export default function Editor3D() {
             isPlaying={isAnimating}
             onAnimationComplete={handleAnimationComplete}
             onCameraChange={handleCameraChange}
+            skySettings={skySettings}
           />
         </div>
         

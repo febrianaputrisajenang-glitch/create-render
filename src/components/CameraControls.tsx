@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useCallback } from 'react'
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -12,7 +12,8 @@ import {
   Trash2, 
   Eye,
   RotateCcw,
-  Clock
+  Clock,
+  GripVertical
 } from "lucide-react"
 import * as THREE from 'three'
 
@@ -30,6 +31,7 @@ interface CameraControlsProps {
   onPlayAnimation: () => void
   onStopAnimation: () => void
   onJumpToKeyframe: (keyframe: CameraKeyframe) => void
+  onReorderKeyframes: (keyframes: CameraKeyframe[]) => void
   keyframes: CameraKeyframe[]
   isPlaying: boolean
   currentCameraPosition: [number, number, number]
@@ -43,6 +45,7 @@ export default function CameraControls({
   onPlayAnimation,
   onStopAnimation,
   onJumpToKeyframe,
+  onReorderKeyframes,
   keyframes,
   isPlaying,
   currentCameraPosition,
@@ -52,6 +55,7 @@ export default function CameraControls({
   const [newKeyframeName, setNewKeyframeName] = useState('')
   const [newKeyframeDuration, setNewKeyframeDuration] = useState([2])
   const [isRecording, setIsRecording] = useState(false)
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null)
 
   const handleAddKeyframe = () => {
     const name = newKeyframeName.trim() || `Keyframe ${keyframes.length + 1}`
@@ -77,6 +81,33 @@ export default function CameraControls({
   }
 
   const totalDuration = keyframes.reduce((sum, kf) => sum + kf.duration, 0)
+
+  // Drag and drop handlers
+  const handleDragStart = useCallback((e: React.DragEvent, index: number) => {
+    setDraggedIndex(index)
+    e.dataTransfer.effectAllowed = 'move'
+  }, [])
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'move'
+  }, [])
+
+  const handleDrop = useCallback((e: React.DragEvent, dropIndex: number) => {
+    e.preventDefault()
+    if (draggedIndex === null || draggedIndex === dropIndex) return
+
+    const newKeyframes = [...keyframes]
+    const [draggedItem] = newKeyframes.splice(draggedIndex, 1)
+    newKeyframes.splice(dropIndex, 0, draggedItem)
+    
+    onReorderKeyframes(newKeyframes)
+    setDraggedIndex(null)
+  }, [draggedIndex, keyframes, onReorderKeyframes])
+
+  const handleDragEnd = useCallback(() => {
+    setDraggedIndex(null)
+  }, [])
 
   return (
     <Card className="p-4 space-y-4">
@@ -183,12 +214,22 @@ export default function CameraControls({
           {keyframes.map((keyframe, index) => (
             <div
               key={keyframe.id}
-              className="flex items-center justify-between p-2 bg-muted/50 rounded text-xs hover:bg-muted/80 transition-colors"
+              draggable
+              onDragStart={(e) => handleDragStart(e, index)}
+              onDragOver={handleDragOver}
+              onDrop={(e) => handleDrop(e, index)}
+              onDragEnd={handleDragEnd}
+              className={`flex items-center justify-between p-2 bg-muted/50 rounded text-xs hover:bg-muted/80 transition-colors cursor-move ${
+                draggedIndex === index ? 'opacity-50' : ''
+              }`}
             >
-              <div className="flex-1 min-w-0">
-                <div className="font-medium truncate">{keyframe.name}</div>
-                <div className="text-muted-foreground">
-                  {keyframe.duration}s • Frame {index + 1}
+              <div className="flex items-center gap-2">
+                <GripVertical className="h-3 w-3 text-muted-foreground" />
+                <div className="flex-1 min-w-0">
+                  <div className="font-medium truncate">{keyframe.name}</div>
+                  <div className="text-muted-foreground">
+                    {keyframe.duration}s • Frame {index + 1}
+                  </div>
                 </div>
               </div>
               
