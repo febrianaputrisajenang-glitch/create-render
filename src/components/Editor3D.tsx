@@ -18,13 +18,17 @@ import {
   Grid3X3,
   Eye,
   Trees,
-  Mountain
+  Mountain,
+  Navigation,
+  MousePointer
 } from "lucide-react"
 import { Link } from "react-router-dom"
 import * as THREE from 'three'
 import CameraControls, { CameraKeyframe } from './CameraControls'
 import MaterialEditor, { MaterialProperties } from './MaterialEditor'
 import SkyControls, { SkySettings } from './SkyControls'
+import FirstPersonControls from './FirstPersonControls'
+import SceneExporter from './SceneExporter'
 
 type ObjectType = 'cube' | 'sphere' | 'cylinder' | 'cone' | 'torus' | 'plane' | 'tree' | 'ground' | 'house' | 'mountain'
 type TransformMode = 'translate' | 'rotate' | 'scale'
@@ -490,7 +494,8 @@ function Viewport({
   isPlaying,
   onAnimationComplete,
   onCameraChange,
-  skySettings
+  skySettings,
+  controlMode
 }: {
   objects: SceneObject[]
   selectedObjectId: string | null
@@ -502,6 +507,7 @@ function Viewport({
   onAnimationComplete: () => void
   onCameraChange: (position: [number, number, number], target: [number, number, number]) => void
   skySettings: SkySettings
+  controlMode: 'orbit' | 'firstperson'
 }) {
   const selectedObject = objects.find(obj => obj.id === selectedObjectId)
   const selectedMeshRef = useRef<THREE.Mesh>(null)
@@ -560,24 +566,32 @@ function Viewport({
         
         <CameraMarkers keyframes={keyframes} />
         
-        <OrbitControls
-          ref={orbitControlsRef}
-          makeDefault
-          enableDamping
-          dampingFactor={0.05}
-          maxPolarAngle={Math.PI / 2 * 1.8}
-          enabled={!isPlaying}
-          onChange={() => {
-            if (orbitControlsRef.current && !isPlaying) {
-              const camera = orbitControlsRef.current.object
-              const target = orbitControlsRef.current.target
-              onCameraChange(
-                [camera.position.x, camera.position.y, camera.position.z],
-                [target.x, target.y, target.z]
-              )
-            }
-          }}
-        />
+        {/* Camera Controls */}
+        {controlMode === 'firstperson' ? (
+          <FirstPersonControls 
+            enabled={!isPlaying && controlMode === 'firstperson'} 
+            speed={5}
+          />
+        ) : (
+          <OrbitControls
+            ref={orbitControlsRef}
+            makeDefault
+            enableDamping
+            dampingFactor={0.05}
+            maxPolarAngle={Math.PI / 2 * 1.8}
+            enabled={!isPlaying && controlMode === 'orbit'}
+            onChange={() => {
+              if (orbitControlsRef.current && !isPlaying && controlMode === 'orbit') {
+                const camera = orbitControlsRef.current.object
+                const target = orbitControlsRef.current.target
+                onCameraChange(
+                  [camera.position.x, camera.position.y, camera.position.z],
+                  [target.x, target.y, target.z]
+                )
+              }
+            }}
+          />
+        )}
       </Canvas>
     </div>
   )
@@ -594,6 +608,9 @@ export default function Editor3D() {
   const [isAnimating, setIsAnimating] = useState(false)
   const [currentCameraPosition, setCurrentCameraPosition] = useState<[number, number, number]>([5, 5, 5])
   const [currentCameraTarget, setCurrentCameraTarget] = useState<[number, number, number]>([0, 0, 0])
+  
+  // Control mode state
+  const [controlMode, setControlMode] = useState<'orbit' | 'firstperson'>('orbit')
   
   // Material state
   const [materialProperties, setMaterialProperties] = useState<MaterialProperties>({
@@ -691,6 +708,14 @@ export default function Editor3D() {
   // Sky functions
   const handleSkyChange = useCallback((newSkySettings: SkySettings) => {
     setSkySettings(newSkySettings)
+  }, [])
+  
+  // Import function
+  const handleImportObjects = useCallback((importedObjects: SceneObject[]) => {
+    setObjects(prev => [...prev, ...importedObjects.map(obj => ({
+      ...obj,
+      id: Date.now().toString() + Math.random().toString(36).substr(2, 9) // Generate new IDs
+    }))])
   }, [])
   
   const selectedObject = objects.find(obj => obj.id === selectedObjectId)
@@ -870,6 +895,48 @@ export default function Editor3D() {
             onSkyChange={handleSkyChange}
           />
 
+          {/* Camera Control Mode */}
+          <Card className="p-4 space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide flex items-center gap-2">
+                <Navigation className="h-4 w-4" />
+                Control Mode
+              </h3>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <Button
+                variant={controlMode === 'orbit' ? "default" : "outline"}
+                size="sm"
+                onClick={() => setControlMode('orbit')}
+                className="flex items-center gap-2"
+              >
+                <MousePointer className="h-4 w-4" />
+                Orbit
+              </Button>
+              <Button
+                variant={controlMode === 'firstperson' ? "default" : "outline"}
+                size="sm"
+                onClick={() => setControlMode('firstperson')}
+                className="flex items-center gap-2"
+              >
+                <Navigation className="h-4 w-4" />
+                WASD
+              </Button>
+            </div>
+            {controlMode === 'firstperson' && (
+              <div className="text-xs text-muted-foreground bg-secondary/20 p-2 rounded">
+                📋 Click viewport to enable mouse look<br/>
+                🎮 WASD: Move • Space: Up • Shift: Fast
+              </div>
+            )}
+          </Card>
+
+          {/* Scene Exporter */}
+          <SceneExporter
+            objects={objects}
+            onImportObjects={handleImportObjects}
+          />
+
           {/* Actions */}
           <div className="space-y-3">
             <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">Actions</h3>
@@ -899,6 +966,7 @@ export default function Editor3D() {
             onAnimationComplete={handleAnimationComplete}
             onCameraChange={handleCameraChange}
             skySettings={skySettings}
+            controlMode={controlMode}
           />
         </div>
         
