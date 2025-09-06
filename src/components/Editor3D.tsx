@@ -33,12 +33,19 @@ interface SceneObject {
   color: string
 }
 
-function SceneObject({ object, isSelected, onSelect }: { 
+function SceneObject({ 
+  object, 
+  isSelected, 
+  onSelect,
+  meshRef 
+}: { 
   object: SceneObject
   isSelected: boolean
   onSelect: () => void 
+  meshRef?: React.MutableRefObject<THREE.Mesh | null>
 }) {
-  const meshRef = useRef<THREE.Mesh>(null!)
+  const internalMeshRef = useRef<THREE.Mesh>(null!)
+  const actualMeshRef = meshRef || internalMeshRef
   
   const getGeometry = () => {
     switch (object.type) {
@@ -61,7 +68,7 @@ function SceneObject({ object, isSelected, onSelect }: {
   
   return (
     <mesh
-      ref={meshRef}
+      ref={actualMeshRef}
       position={object.position}
       rotation={object.rotation}
       scale={object.scale}
@@ -92,6 +99,7 @@ function Viewport({
   onTransformObject: (id: string, position: [number, number, number], rotation: [number, number, number], scale: [number, number, number]) => void
 }) {
   const selectedObject = objects.find(obj => obj.id === selectedObjectId)
+  const selectedMeshRef = useRef<THREE.Mesh>(null)
   
   return (
     <div className="flex-1 bg-viewport border border-border rounded-lg overflow-hidden">
@@ -117,23 +125,22 @@ function Viewport({
             object={object}
             isSelected={object.id === selectedObjectId}
             onSelect={() => onSelectObject(object.id)}
+            meshRef={object.id === selectedObjectId ? selectedMeshRef : undefined}
           />
         ))}
         
-        {selectedObject && (
+        {selectedObject && selectedMeshRef.current && (
           <TransformControls
-            object-position={selectedObject.position}
-            object-rotation={selectedObject.rotation} 
-            object-scale={selectedObject.scale}
+            object={selectedMeshRef.current}
             mode={transformMode}
-            onObjectChange={(event) => {
-              if (event && event.target) {
-                const target = event.target as any
+            onObjectChange={() => {
+              if (selectedMeshRef.current) {
+                const mesh = selectedMeshRef.current
                 onTransformObject(
                   selectedObject.id,
-                  [target.position.x, target.position.y, target.position.z],
-                  [target.rotation.x, target.rotation.y, target.rotation.z],
-                  [target.scale.x, target.scale.y, target.scale.z]
+                  [mesh.position.x, mesh.position.y, mesh.position.z],
+                  [mesh.rotation.x, mesh.rotation.y, mesh.rotation.z],
+                  [mesh.scale.x, mesh.scale.y, mesh.scale.z]
                 )
               }
             }}
