@@ -1,5 +1,5 @@
 import { Canvas, useThree, useFrame } from '@react-three/fiber'
-import { OrbitControls, Grid, TransformControls } from '@react-three/drei'
+import { OrbitControls, Grid, TransformControls, Clouds, Line } from '@react-three/drei'
 import { useRef, useState, useCallback, useEffect } from 'react'
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
@@ -26,7 +26,7 @@ import CameraControls, { CameraKeyframe } from './CameraControls'
 import MaterialEditor, { MaterialProperties } from './MaterialEditor'
 import SkyControls, { SkySettings } from './SkyControls'
 
-type ObjectType = 'cube' | 'sphere' | 'cylinder' | 'cone' | 'torus' | 'plane' | 'tree' | 'ground'
+type ObjectType = 'cube' | 'sphere' | 'cylinder' | 'cone' | 'torus' | 'plane' | 'tree' | 'ground' | 'house' | 'mountain'
 type TransformMode = 'translate' | 'rotate' | 'scale'
 
 interface SceneObject {
@@ -108,6 +108,10 @@ function SceneObject({
         )
       case 'ground':
         return <planeGeometry args={[10, 10, 32, 32]} />
+      case 'house':
+        return <boxGeometry args={[1, 1, 1]} />
+      case 'mountain':
+        return <coneGeometry args={[2, 3, 8]} />
       default:
         return <boxGeometry args={[1, 1, 1]} />
     }
@@ -157,6 +161,78 @@ function SceneObject({
           wireframe={isSelected}
         />
       </mesh>
+    )
+  }
+
+  if (object.type === 'house') {
+    return (
+      <group
+        ref={actualMeshRef as any}
+        position={object.position}
+        rotation={object.rotation}
+        scale={object.scale}
+        onClick={onSelect}
+      >
+        {/* House Base */}
+        <mesh position={[0, 0, 0]}>
+          <boxGeometry args={[1, 1, 1]} />
+          <meshStandardMaterial 
+            color={object.material.color || '#D2691E'} 
+            metalness={object.material.metalness}
+            roughness={object.material.roughness || 0.8}
+            emissive={object.material.emissive}
+            emissiveIntensity={object.material.emissiveIntensity}
+            map={texture}
+            wireframe={isSelected}
+          />
+        </mesh>
+        {/* Roof */}
+        <mesh position={[0, 0.8, 0]}>
+          <coneGeometry args={[0.8, 0.6, 4]} />
+          <meshStandardMaterial color="#8B0000" wireframe={isSelected} />
+        </mesh>
+        {/* Door */}
+        <mesh position={[0, -0.2, 0.51]}>
+          <boxGeometry args={[0.3, 0.6, 0.02]} />
+          <meshStandardMaterial color="#654321" wireframe={isSelected} />
+        </mesh>
+      </group>
+    )
+  }
+
+  if (object.type === 'mountain') {
+    return (
+      <group
+        ref={actualMeshRef as any}
+        position={object.position}
+        rotation={object.rotation}
+        scale={object.scale}
+        onClick={onSelect}
+      >
+        {/* Main Peak */}
+        <mesh position={[0, 0, 0]}>
+          <coneGeometry args={[2, 3, 8]} />
+          <meshStandardMaterial 
+            color={object.material.color || '#696969'} 
+            metalness={object.material.metalness}
+            roughness={object.material.roughness || 0.9}
+            emissive={object.material.emissive}
+            emissiveIntensity={object.material.emissiveIntensity}
+            map={texture}
+            wireframe={isSelected}
+          />
+        </mesh>
+        {/* Snow Cap */}
+        <mesh position={[0, 1.2, 0]}>
+          <coneGeometry args={[1, 1.2, 8]} />
+          <meshStandardMaterial color="#FFFAFA" wireframe={isSelected} />
+        </mesh>
+        {/* Side Peak */}
+        <mesh position={[1.5, -0.5, 0.5]}>
+          <coneGeometry args={[1, 2, 8]} />
+          <meshStandardMaterial color="#778899" wireframe={isSelected} />
+        </mesh>
+      </group>
     )
   }
 
@@ -331,10 +407,80 @@ function SkyEnvironment({ skySettings }: { skySettings: SkySettings }) {
     }
   }
 
-  return <>{getLighting()}</>
+  return (
+    <>
+      {getLighting()}
+      
+      {/* Cloud System - Simple Implementation */}
+      {skySettings.cloudCoverage > 0 && (
+        <group position={[0, 15, 0]}>
+          {Array.from({ length: Math.floor(skySettings.cloudCoverage * 20) }, (_, i) => (
+            <mesh
+              key={i}
+              position={[
+                (Math.random() - 0.5) * 40,
+                Math.random() * 10,
+                (Math.random() - 0.5) * 40
+              ]}
+            >
+              <sphereGeometry args={[2 * skySettings.cloudDensity, 8, 6]} />
+              <meshBasicMaterial 
+                color="#ffffff" 
+                transparent
+                opacity={0.6}
+              />
+            </mesh>
+          ))}
+        </group>
+      )}
+    </>
+  )
 }
 
-function Viewport({ 
+function CameraMarkers({ keyframes }: { keyframes: CameraKeyframe[] }) {
+  return (
+    <>
+      {keyframes.map((keyframe, index) => (
+        <group key={keyframe.id} position={keyframe.position}>
+          {/* Camera Body */}
+          <mesh>
+            <boxGeometry args={[0.3, 0.2, 0.4]} />
+            <meshStandardMaterial color="#333333" />
+          </mesh>
+          
+          {/* Camera Lens */}
+          <mesh position={[0, 0, 0.25]}>
+            <cylinderGeometry args={[0.08, 0.1, 0.15, 16]} />
+            <meshStandardMaterial color="#000000" />
+          </mesh>
+          
+          {/* Keyframe Number */}
+          <mesh position={[0, 0.4, 0]}>
+            <sphereGeometry args={[0.1, 8, 8]} />
+            <meshStandardMaterial 
+              color={index === 0 ? "#00ff00" : "#ff6600"} 
+              emissive={index === 0 ? "#004400" : "#441100"}
+              emissiveIntensity={0.5}
+            />
+          </mesh>
+          
+          {/* Direction Line to Target */}
+          <Line
+            points={[
+              keyframe.position,
+              keyframe.target
+            ]}
+            color="#ff6600"
+            lineWidth={2}
+            dashed={true}
+          />
+        </group>
+      ))}
+    </>
+  )
+}
+
+function Viewport({
   objects, 
   selectedObjectId, 
   onSelectObject,
@@ -412,7 +558,9 @@ function Viewport({
           orbitControlsRef={orbitControlsRef}
         />
         
-        <OrbitControls 
+        <CameraMarkers keyframes={keyframes} />
+        
+        <OrbitControls
           ref={orbitControlsRef}
           makeDefault
           enableDamping
@@ -460,7 +608,9 @@ export default function Editor3D() {
   const [skySettings, setSkySettings] = useState<SkySettings>({
     preset: 'day',
     intensity: 1,
-    fogDensity: 0.02
+    fogDensity: 0.02,
+    cloudCoverage: 0.3,
+    cloudDensity: 1
   })
   
   const addObject = (type: ObjectType) => {

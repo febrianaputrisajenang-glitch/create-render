@@ -16,6 +16,8 @@ export interface SkySettings {
   preset: 'day' | 'night' | 'sunset' | 'cloudy' | 'rainy' | 'orange'
   intensity: number
   fogDensity: number
+  cloudCoverage: number
+  cloudDensity: number
 }
 
 interface SkyControlsProps {
@@ -162,6 +164,42 @@ export default function SkyControls({
           />
           <span className="text-xs min-w-[3rem] text-muted-foreground">
             {(skySettings.fogDensity * 100).toFixed(1)}%
+          </span>
+        </div>
+      </div>
+
+      {/* Cloud Coverage */}
+      <div className="space-y-2">
+        <Label className="text-xs">Cloud Coverage</Label>
+        <div className="flex items-center gap-3">
+          <Slider
+            value={[skySettings.cloudCoverage]}
+            onValueChange={(value) => onSkyChange({ ...skySettings, cloudCoverage: value[0] })}
+            min={0}
+            max={1}
+            step={0.05}
+            className="flex-1"
+          />
+          <span className="text-xs min-w-[3rem] text-muted-foreground">
+            {(skySettings.cloudCoverage * 100).toFixed(0)}%
+          </span>
+        </div>
+      </div>
+
+      {/* Cloud Density */}
+      <div className="space-y-2">
+        <Label className="text-xs">Cloud Density</Label>
+        <div className="flex items-center gap-3">
+          <Slider
+            value={[skySettings.cloudDensity]}
+            onValueChange={(value) => onSkyChange({ ...skySettings, cloudDensity: value[0] })}
+            min={0.1}
+            max={2}
+            step={0.1}
+            className="flex-1"
+          />
+          <span className="text-xs min-w-[3rem] text-muted-foreground">
+            {skySettings.cloudDensity.toFixed(1)}x
           </span>
         </div>
       </div>
