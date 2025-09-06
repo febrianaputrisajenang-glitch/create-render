@@ -57,6 +57,23 @@ export default {
           border: "hsl(var(--sidebar-border))",
           ring: "hsl(var(--sidebar-ring))",
         },
+        // 3D Editor specific colors
+        viewport: {
+          DEFAULT: "hsl(var(--viewport-bg))",
+        },
+        grid: "hsl(var(--grid-color))",
+        selection: "hsl(var(--selection))",
+        hover: "hsl(var(--hover))",
+      },
+      backgroundImage: {
+        'gradient-primary': 'var(--gradient-primary)',
+        'gradient-secondary': 'var(--gradient-secondary)', 
+        'gradient-glow': 'var(--gradient-glow)',
+      },
+      boxShadow: {
+        glow: 'var(--shadow-glow)',
+        neon: 'var(--shadow-neon)',
+        deep: 'var(--shadow-deep)',
       },
       borderRadius: {
         lg: "var(--radius)",
