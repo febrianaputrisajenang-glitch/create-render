@@ -22,7 +22,9 @@ import {
   Navigation,
   MousePointer,
   Car,
-  Route
+  Route,
+  ChevronDown,
+  ChevronRight
 } from "lucide-react"
 import { Link } from "react-router-dom"
 import * as THREE from 'three'
@@ -31,6 +33,7 @@ import MaterialEditor, { MaterialProperties } from './MaterialEditor'
 import SkyControls, { SkySettings } from './SkyControls'
 import FirstPersonControls from './FirstPersonControls'
 import SceneExporter from './SceneExporter'
+import { CollapsibleSection } from './CollapsibleSection'
 
 type ObjectType = 'cube' | 'sphere' | 'cylinder' | 'cone' | 'torus' | 'plane' | 'tree' | 'ground' | 'house' | 'mountain' | 'car' | 'road'
 type TransformMode = 'translate' | 'rotate' | 'scale'
@@ -998,12 +1001,11 @@ export default function Editor3D() {
       </header>
       
       <div className="flex-1 flex">
-        {/* Left Toolbar */}
-        <div className="w-80 bg-card border-r border-border p-4 space-y-6 overflow-y-auto">
-          {/* Transform Tools */}
-          <div className="space-y-3">
-            <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">Transform</h3>
-            <div className="grid grid-cols-3 gap-2">
+        {/* Left Collapsible Sidebar */}
+        <div className="w-80 bg-card border-r border-border overflow-y-auto">
+          {/* Collapsible Navigation Sections */}
+          <CollapsibleSection title="Transform Tools" icon={<Move className="h-4 w-4" />} defaultOpen>
+            <div className="grid grid-cols-3 gap-2 p-4">
               <Button
                 variant={transformMode === 'translate' ? 'default' : 'outline'}
                 size="sm"
@@ -1029,200 +1031,155 @@ export default function Editor3D() {
                 <Maximize2 className="h-4 w-4" />
               </Button>
             </div>
-          </div>
-          
-          {/* Add Objects */}
-          <div className="space-y-3">
-            <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">Add Objects</h3>
-            <div className="space-y-2">
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="w-full justify-start"
-                onClick={() => addObject('cube')}
-              >
+          </CollapsibleSection>
+
+          <CollapsibleSection title="Add Objects" icon={<Box className="h-4 w-4" />}>
+            <div className="space-y-2 p-4">
+              <Button variant="outline" size="sm" className="w-full justify-start" onClick={() => addObject('cube')}>
                 <Box className="h-4 w-4 mr-2" />
                 Cube
               </Button>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="w-full justify-start"
-                onClick={() => addObject('sphere')}
-              >
+              <Button variant="outline" size="sm" className="w-full justify-start" onClick={() => addObject('sphere')}>
                 <Circle className="h-4 w-4 mr-2" />
                 Sphere
               </Button>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="w-full justify-start"
-                onClick={() => addObject('cylinder')}
-              >
+              <Button variant="outline" size="sm" className="w-full justify-start" onClick={() => addObject('cylinder')}>
                 <Cylinder className="h-4 w-4 mr-2" />
                 Cylinder
               </Button>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="w-full justify-start"
-                onClick={() => addObject('cone')}
-              >
+              <Button variant="outline" size="sm" className="w-full justify-start" onClick={() => addObject('cone')}>
                 <Cylinder className="h-4 w-4 mr-2" />
                 Cone
               </Button>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="w-full justify-start"
-                onClick={() => addObject('torus')}
-              >
+              <Button variant="outline" size="sm" className="w-full justify-start" onClick={() => addObject('torus')}>
                 <Circle className="h-4 w-4 mr-2" />
                 Torus
               </Button>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="w-full justify-start"
-                onClick={() => addObject('plane')}
-              >
+              <Button variant="outline" size="sm" className="w-full justify-start" onClick={() => addObject('plane')}>
                 <Grid3X3 className="h-4 w-4 mr-2" />
                 Plane
               </Button>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="w-full justify-start"
-                onClick={() => addObject('tree')}
-              >
+              <Button variant="outline" size="sm" className="w-full justify-start" onClick={() => addObject('tree')}>
                 <Trees className="h-4 w-4 mr-2" />
                 Tree
               </Button>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="w-full justify-start"
-                onClick={() => addObject('ground')}
-              >
+              <Button variant="outline" size="sm" className="w-full justify-start" onClick={() => addObject('ground')}>
                 <Mountain className="h-4 w-4 mr-2" />
                 Ground
               </Button>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="w-full justify-start"
-                onClick={() => addObject('house')}
-              >
+              <Button variant="outline" size="sm" className="w-full justify-start" onClick={() => addObject('house')}>
                 <Home className="h-4 w-4 mr-2" />
                 House
               </Button>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="w-full justify-start"
-                onClick={() => addObject('mountain')}
-              >
+              <Button variant="outline" size="sm" className="w-full justify-start" onClick={() => addObject('mountain')}>
                 <Mountain className="h-4 w-4 mr-2" />
                 Mountain
               </Button>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="w-full justify-start"
-                onClick={() => addObject('car')}
-              >
+              <Button variant="outline" size="sm" className="w-full justify-start" onClick={() => addObject('car')}>
                 <Car className="h-4 w-4 mr-2" />
                 Car
               </Button>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="w-full justify-start"
-                onClick={() => addObject('road')}
-              >
+              <Button variant="outline" size="sm" className="w-full justify-start" onClick={() => addObject('road')}>
                 <Route className="h-4 w-4 mr-2" />
                 Road
               </Button>
             </div>
-          </div>
-          
-          {/* Camera Controls */}
-          <CameraControls
-            onAddKeyframe={handleAddKeyframe}
-            onDeleteKeyframe={handleDeleteKeyframe}
-            onPlayAnimation={handlePlayAnimation}
-            onStopAnimation={handleStopAnimation}
-            onJumpToKeyframe={handleJumpToKeyframe}
-            onReorderKeyframes={handleReorderKeyframes}
-            keyframes={keyframes}
-            isPlaying={isAnimating}
-            currentCameraPosition={currentCameraPosition}
-            currentCameraTarget={currentCameraTarget}
-            onCameraChange={handleCameraChange}
-          />
+          </CollapsibleSection>
 
-          {/* Sky Controls */}
-          <SkyControls
-            skySettings={skySettings}
-            onSkyChange={handleSkyChange}
-          />
+          <CollapsibleSection title="Camera Controls" icon={<Eye className="h-4 w-4" />}>
+            <div className="p-4">
+              <CameraControls
+                onAddKeyframe={handleAddKeyframe}
+                onDeleteKeyframe={handleDeleteKeyframe}
+                onPlayAnimation={handlePlayAnimation}
+                onStopAnimation={handleStopAnimation}
+                onJumpToKeyframe={handleJumpToKeyframe}
+                onReorderKeyframes={handleReorderKeyframes}
+                keyframes={keyframes}
+                isPlaying={isAnimating}
+                currentCameraPosition={currentCameraPosition}
+                currentCameraTarget={currentCameraTarget}
+                onCameraChange={handleCameraChange}
+              />
+            </div>
+          </CollapsibleSection>
 
-          {/* Camera Control Mode */}
-          <Card className="p-4 space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide flex items-center gap-2">
-                <Navigation className="h-4 w-4" />
-                Control Mode
-              </h3>
+          <CollapsibleSection title="Sky & Weather" icon={<Circle className="h-4 w-4" />}>
+            <div className="p-4">
+              <SkyControls
+                skySettings={skySettings}
+                onSkyChange={handleSkyChange}
+              />
             </div>
-            <div className="grid grid-cols-2 gap-2">
-              <Button
-                variant={controlMode === 'orbit' ? "default" : "outline"}
-                size="sm"
-                onClick={() => setControlMode('orbit')}
-                className="flex items-center gap-2"
-              >
-                <MousePointer className="h-4 w-4" />
-                Orbit
-              </Button>
-              <Button
-                variant={controlMode === 'firstperson' ? "default" : "outline"}
-                size="sm"
-                onClick={() => setControlMode('firstperson')}
-                className="flex items-center gap-2"
-              >
-                <Navigation className="h-4 w-4" />
-                WASD
-              </Button>
-            </div>
-            {controlMode === 'firstperson' && (
-              <div className="text-xs text-muted-foreground bg-secondary/20 p-2 rounded">
-                📋 Click viewport to enable mouse look<br/>
-                🎮 WASD: Move • Space: Up • Shift: Fast
+          </CollapsibleSection>
+
+          <CollapsibleSection title="Control Mode" icon={<Navigation className="h-4 w-4" />}>
+            <div className="p-4">
+              <div className="grid grid-cols-2 gap-2">
+                <Button
+                  variant={controlMode === 'orbit' ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setControlMode('orbit')}
+                  className="flex items-center gap-2"
+                >
+                  <MousePointer className="h-4 w-4" />
+                  Orbit
+                </Button>
+                <Button
+                  variant={controlMode === 'firstperson' ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setControlMode('firstperson')}
+                  className="flex items-center gap-2"
+                >
+                  <Navigation className="h-4 w-4" />
+                  WASD
+                </Button>
               </div>
-            )}
-          </Card>
+              {controlMode === 'firstperson' && (
+                <div className="text-xs text-muted-foreground bg-secondary/20 p-2 rounded mt-2">
+                  📋 Click viewport to enable mouse look<br/>
+                  🎮 WASD: Move • Space: Up • Shift: Fast
+                </div>
+              )}
+            </div>
+          </CollapsibleSection>
 
-          {/* Scene Exporter */}
-          <SceneExporter
-            objects={objects}
-            onImportObjects={handleImportObjects}
-          />
+          <CollapsibleSection title="Import/Export" icon={<Upload className="h-4 w-4" />}>
+            <div className="p-4">
+              <SceneExporter
+                objects={objects}
+                onImportObjects={handleImportObjects}
+              />
+            </div>
+          </CollapsibleSection>
 
-          {/* Actions */}
-          <div className="space-y-3">
-            <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">Actions</h3>
-            <Button
-              variant="destructive"
-              size="sm"
-              className="w-full justify-start"
-              onClick={deleteSelectedObject}
-              disabled={!selectedObjectId}
-            >
-              <Trash2 className="h-4 w-4 mr-2" />
-              Delete Selected
-            </Button>
-          </div>
+          {/* Material Editor - Only show when object is selected */}
+          {selectedObject && (
+            <CollapsibleSection title="Material Editor" icon={<Circle className="h-4 w-4" />} defaultOpen>
+              <div className="p-4">
+                <MaterialEditor
+                  materialProperties={materialProperties}
+                  onMaterialChange={handleMaterialChange}
+                  selectedObjectId={selectedObjectId}
+                />
+              </div>
+            </CollapsibleSection>
+          )}
+
+          <CollapsibleSection title="Actions" icon={<Trash2 className="h-4 w-4" />}>
+            <div className="p-4">
+              <Button
+                variant="destructive"
+                size="sm"
+                className="w-full justify-start"
+                onClick={deleteSelectedObject}
+                disabled={!selectedObjectId}
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Delete Selected
+              </Button>
+            </div>
+          </CollapsibleSection>
         </div>
         
         {/* Main Viewport */}
