@@ -20,7 +20,9 @@ import {
   Trees,
   Mountain,
   Navigation,
-  MousePointer
+  MousePointer,
+  Car,
+  Route
 } from "lucide-react"
 import { Link } from "react-router-dom"
 import * as THREE from 'three'
@@ -30,7 +32,7 @@ import SkyControls, { SkySettings } from './SkyControls'
 import FirstPersonControls from './FirstPersonControls'
 import SceneExporter from './SceneExporter'
 
-type ObjectType = 'cube' | 'sphere' | 'cylinder' | 'cone' | 'torus' | 'plane' | 'tree' | 'ground' | 'house' | 'mountain'
+type ObjectType = 'cube' | 'sphere' | 'cylinder' | 'cone' | 'torus' | 'plane' | 'tree' | 'ground' | 'house' | 'mountain' | 'car' | 'road'
 type TransformMode = 'translate' | 'rotate' | 'scale'
 
 interface SceneObject {
@@ -95,33 +97,23 @@ function SceneObject({
       case 'plane':
         return <planeGeometry args={[1, 1]} />
       case 'tree':
-        // Simple tree made of cylinder trunk + cone leaves
-        return (
-          <>
-            <group>
-              <mesh position={[0, -0.3, 0]}>
-                <cylinderGeometry args={[0.1, 0.15, 0.6, 8]} />
-                <meshStandardMaterial color="#8B4513" />
-              </mesh>
-              <mesh position={[0, 0.2, 0]}>
-                <coneGeometry args={[0.4, 0.8, 8]} />
-                <meshStandardMaterial color="#228B22" />
-              </mesh>
-            </group>
-          </>
-        )
+        return <sphereGeometry args={[0.5, 16, 16]} />
+      case 'car':
+        return <boxGeometry args={[2, 0.8, 1]} />
+      case 'road':
+        return <planeGeometry args={[20, 4, 32, 8]} />
       case 'ground':
-        return <planeGeometry args={[10, 10, 32, 32]} />
+        return <planeGeometry args={[50, 50, 64, 64]} />
       case 'house':
-        return <boxGeometry args={[1, 1, 1]} />
+        return <boxGeometry args={[2, 2, 2]} />
       case 'mountain':
-        return <coneGeometry args={[2, 3, 8]} />
+        return <sphereGeometry args={[3, 16, 16]} />
       default:
         return <boxGeometry args={[1, 1, 1]} />
     }
   }
   
-  // Special rendering for complex objects
+  // Enhanced tree with detailed foliage
   if (object.type === 'tree') {
     return (
       <group
@@ -132,42 +124,95 @@ function SceneObject({
         onClick={onSelect}
       >
         {/* Trunk */}
-        <mesh position={[0, -0.3, 0]}>
-          <cylinderGeometry args={[0.1, 0.15, 0.6, 8]} />
-          <meshStandardMaterial color="#8B4513" wireframe={isSelected} />
+        <mesh position={[0, -0.8, 0]}>
+          <cylinderGeometry args={[0.15, 0.25, 1.6, 12]} />
+          <meshStandardMaterial 
+            color="#654321" 
+            roughness={0.9}
+            wireframe={isSelected} 
+          />
         </mesh>
-        {/* Leaves */}
-        <mesh position={[0, 0.2, 0]}>
-          <coneGeometry args={[0.4, 0.8, 8]} />
-          <meshStandardMaterial color="#228B22" wireframe={isSelected} />
-        </mesh>
+        
+        {/* Multiple Foliage Layers for Realistic Look */}
+        {[0.3, 0.8, 1.3].map((y, i) => (
+          <mesh key={i} position={[0, y, 0]}>
+            <sphereGeometry args={[0.6 + i * 0.2, 16, 16]} />
+            <meshStandardMaterial 
+              color={i === 0 ? "#2d5016" : i === 1 ? "#3d6b1f" : "#4a7c23"}
+              roughness={0.8}
+              wireframe={isSelected} 
+            />
+          </mesh>
+        ))}
+        
+        {/* Random Branch Details */}
+        {[...Array(4)].map((_, i) => (
+          <mesh 
+            key={`branch-${i}`} 
+            position={[
+              (Math.sin(i * Math.PI / 2) * 0.4),
+              0.2 + i * 0.2,
+              (Math.cos(i * Math.PI / 2) * 0.4)
+            ]}
+            rotation={[0, i * Math.PI / 2, Math.PI / 6]}
+          >
+            <cylinderGeometry args={[0.03, 0.05, 0.3, 6]} />
+            <meshStandardMaterial color="#654321" wireframe={isSelected} />
+          </mesh>
+        ))}
       </group>
     )
   }
 
+  // Enhanced ground with grass patches
   if (object.type === 'ground') {
     return (
-      <mesh
-        ref={actualMeshRef}
+      <group
+        ref={actualMeshRef as any}
         position={object.position}
-        rotation={[-Math.PI / 2, 0, 0]} // Rotate to be horizontal
+        rotation={object.rotation}
         scale={object.scale}
         onClick={onSelect}
       >
-        <planeGeometry args={[10, 10, 32, 32]} />
-        <meshStandardMaterial 
-          color={object.material.color || '#8B7355'}
-          metalness={object.material.metalness}
-          roughness={object.material.roughness || 0.9}
-          emissive={object.material.emissive}
-          emissiveIntensity={object.material.emissiveIntensity}
-          map={texture}
-          wireframe={isSelected}
-        />
-      </mesh>
+        {/* Main ground plane */}
+        <mesh rotation={[-Math.PI / 2, 0, 0]}>
+          <planeGeometry args={[50, 50, 128, 128]} />
+          <meshStandardMaterial 
+            color={object.material.color || '#3a5f3a'}
+            metalness={object.material.metalness || 0}
+            roughness={object.material.roughness || 0.95}
+            emissive={object.material.emissive}
+            emissiveIntensity={object.material.emissiveIntensity}
+            map={texture}
+            wireframe={isSelected}
+          />
+        </mesh>
+        
+        {/* Grass Patches */}
+        {!isSelected && [...Array(200)].map((_, i) => (
+          <mesh 
+            key={i} 
+            position={[
+              (Math.random() - 0.5) * 40,
+              0.05,
+              (Math.random() - 0.5) * 40
+            ]}
+            rotation={[0, Math.random() * Math.PI * 2, 0]}
+          >
+            <planeGeometry args={[0.1, 0.3]} />
+            <meshStandardMaterial 
+              color="#2d5a2d"
+              transparent
+              opacity={0.8}
+              side={2}
+            />
+          </mesh>
+        ))}
+      </group>
     )
   }
 
+  // Enhanced house with better details
   if (object.type === 'house') {
     return (
       <group
@@ -177,33 +222,58 @@ function SceneObject({
         scale={object.scale}
         onClick={onSelect}
       >
-        {/* House Base */}
-        <mesh position={[0, 0, 0]}>
-          <boxGeometry args={[1, 1, 1]} />
+        {/* Foundation */}
+        <mesh position={[0, -1.2, 0]}>
+          <boxGeometry args={[2.2, 0.4, 2.2]} />
+          <meshStandardMaterial color="#5a5a5a" roughness={0.9} wireframe={isSelected} />
+        </mesh>
+        
+        {/* Main House Body */}
+        <mesh position={[0, -0.5, 0]}>
+          <boxGeometry args={[2, 1.4, 2]} />
           <meshStandardMaterial 
-            color={object.material.color || '#D2691E'} 
-            metalness={object.material.metalness}
-            roughness={object.material.roughness || 0.8}
+            color={object.material.color || '#e6b17a'} 
+            metalness={object.material.metalness || 0}
+            roughness={object.material.roughness || 0.7}
             emissive={object.material.emissive}
             emissiveIntensity={object.material.emissiveIntensity}
             map={texture}
             wireframe={isSelected}
           />
         </mesh>
-        {/* Roof */}
-        <mesh position={[0, 0.8, 0]}>
-          <coneGeometry args={[0.8, 0.6, 4]} />
-          <meshStandardMaterial color="#8B0000" wireframe={isSelected} />
+        
+        {/* Roof Structure */}
+        <mesh position={[0, 0.5, 0]} rotation={[0, Math.PI / 4, 0]}>
+          <coneGeometry args={[1.6, 1.2, 4]} />
+          <meshStandardMaterial color="#8b2635" roughness={0.8} wireframe={isSelected} />
         </mesh>
+        
         {/* Door */}
-        <mesh position={[0, -0.2, 0.51]}>
-          <boxGeometry args={[0.3, 0.6, 0.02]} />
-          <meshStandardMaterial color="#654321" wireframe={isSelected} />
+        <mesh position={[0, -0.8, 1.01]}>
+          <boxGeometry args={[0.4, 0.8, 0.05]} />
+          <meshStandardMaterial color="#4a2c2a" roughness={0.9} wireframe={isSelected} />
+        </mesh>
+        
+        {/* Windows */}
+        <mesh position={[-0.6, -0.3, 1.01]}>
+          <boxGeometry args={[0.3, 0.3, 0.02]} />
+          <meshStandardMaterial color="#87ceeb" metalness={0.1} roughness={0.1} wireframe={isSelected} />
+        </mesh>
+        <mesh position={[0.6, -0.3, 1.01]}>
+          <boxGeometry args={[0.3, 0.3, 0.02]} />
+          <meshStandardMaterial color="#87ceeb" metalness={0.1} roughness={0.1} wireframe={isSelected} />
+        </mesh>
+        
+        {/* Chimney */}
+        <mesh position={[0.7, 1.2, -0.3]}>
+          <boxGeometry args={[0.2, 0.8, 0.2]} />
+          <meshStandardMaterial color="#8b4513" roughness={0.9} wireframe={isSelected} />
         </mesh>
       </group>
     )
   }
 
+  // Realistic mountain range
   if (object.type === 'mountain') {
     return (
       <group
@@ -213,28 +283,194 @@ function SceneObject({
         scale={object.scale}
         onClick={onSelect}
       >
-        {/* Main Peak */}
-        <mesh position={[0, 0, 0]}>
-          <coneGeometry args={[2, 3, 8]} />
+        {/* Main Mountain Body - Irregular Shape */}
+        <mesh position={[0, -0.5, 0]}>
+          <sphereGeometry args={[3, 16, 12]} />
           <meshStandardMaterial 
-            color={object.material.color || '#696969'} 
-            metalness={object.material.metalness}
-            roughness={object.material.roughness || 0.9}
+            color={object.material.color || '#5a5a5a'} 
+            metalness={object.material.metalness || 0}
+            roughness={object.material.roughness || 0.95}
             emissive={object.material.emissive}
             emissiveIntensity={object.material.emissiveIntensity}
             map={texture}
             wireframe={isSelected}
           />
         </mesh>
-        {/* Snow Cap */}
-        <mesh position={[0, 1.2, 0]}>
-          <coneGeometry args={[1, 1.2, 8]} />
-          <meshStandardMaterial color="#FFFAFA" wireframe={isSelected} />
+        
+        {/* Multiple peaks for realism */}
+        <mesh position={[-1.2, 1.8, 0.5]}>
+          <sphereGeometry args={[1.2, 12, 8]} />
+          <meshStandardMaterial color="#4a4a4a" roughness={0.95} wireframe={isSelected} />
         </mesh>
-        {/* Side Peak */}
-        <mesh position={[1.5, -0.5, 0.5]}>
-          <coneGeometry args={[1, 2, 8]} />
-          <meshStandardMaterial color="#778899" wireframe={isSelected} />
+        
+        <mesh position={[1.8, 1.3, -0.8]}>
+          <sphereGeometry args={[0.9, 10, 6]} />
+          <meshStandardMaterial color="#6a6a6a" roughness={0.95} wireframe={isSelected} />
+        </mesh>
+        
+        {/* Snow caps */}
+        <mesh position={[0, 2.2, 0]}>
+          <sphereGeometry args={[1.5, 12, 8]} />
+          <meshStandardMaterial color="#ffffff" roughness={0.3} wireframe={isSelected} />
+        </mesh>
+        
+        <mesh position={[-1.2, 2.5, 0.5]}>
+          <sphereGeometry args={[0.8, 10, 6]} />
+          <meshStandardMaterial color="#f8f8ff" roughness={0.3} wireframe={isSelected} />
+        </mesh>
+        
+        {/* Rocky details */}
+        {[...Array(8)].map((_, i) => (
+          <mesh 
+            key={i} 
+            position={[
+              (Math.random() - 0.5) * 4,
+              Math.random() * 1.5 - 1,
+              (Math.random() - 0.5) * 4
+            ]}
+          >
+            <sphereGeometry args={[0.1 + Math.random() * 0.3, 8, 6]} />
+            <meshStandardMaterial color="#3a3a3a" roughness={0.9} wireframe={isSelected} />
+          </mesh>
+        ))}
+      </group>
+    )
+  }
+
+  // Modern car with details
+  if (object.type === 'car') {
+    return (
+      <group
+        ref={actualMeshRef as any}
+        position={object.position}
+        rotation={object.rotation}
+        scale={object.scale}
+        onClick={onSelect}
+      >
+        {/* Main Body */}
+        <mesh position={[0, 0.3, 0]}>
+          <boxGeometry args={[2, 0.6, 1]} />
+          <meshStandardMaterial 
+            color={object.material.color || '#ff4444'} 
+            metalness={object.material.metalness || 0.8}
+            roughness={object.material.roughness || 0.2}
+            emissive={object.material.emissive}
+            emissiveIntensity={object.material.emissiveIntensity}
+            map={texture}
+            wireframe={isSelected}
+          />
+        </mesh>
+        
+        {/* Roof */}
+        <mesh position={[0, 0.8, 0]}>
+          <boxGeometry args={[1.8, 0.4, 0.9]} />
+          <meshStandardMaterial 
+            color="#333333" 
+            metalness={0.9}
+            roughness={0.1}
+            wireframe={isSelected}
+          />
+        </mesh>
+        
+        {/* Wheels */}
+        {[[-0.7, -0.2, 0.6], [0.7, -0.2, 0.6], [-0.7, -0.2, -0.6], [0.7, -0.2, -0.6]].map((pos, i) => (
+          <mesh key={i} position={pos as [number, number, number]} rotation={[Math.PI / 2, 0, 0]}>
+            <cylinderGeometry args={[0.15, 0.15, 0.1, 16]} />
+            <meshStandardMaterial color="#222222" roughness={0.9} wireframe={isSelected} />
+          </mesh>
+        ))}
+        
+        {/* Headlights */}
+        <mesh position={[1.05, 0.2, 0.3]}>
+          <sphereGeometry args={[0.08, 12, 8]} />
+          <meshStandardMaterial 
+            color="#ffffff" 
+            emissive="#ffffff"
+            emissiveIntensity={0.3}
+            wireframe={isSelected}
+          />
+        </mesh>
+        <mesh position={[1.05, 0.2, -0.3]}>
+          <sphereGeometry args={[0.08, 12, 8]} />
+          <meshStandardMaterial 
+            color="#ffffff" 
+            emissive="#ffffff"
+            emissiveIntensity={0.3}
+            wireframe={isSelected}
+          />
+        </mesh>
+        
+        {/* Taillights */}
+        <mesh position={[-1.05, 0.2, 0.3]}>
+          <sphereGeometry args={[0.06, 12, 8]} />
+          <meshStandardMaterial 
+            color="#ff0000" 
+            emissive="#ff0000"
+            emissiveIntensity={0.2}
+            wireframe={isSelected}
+          />
+        </mesh>
+        <mesh position={[-1.05, 0.2, -0.3]}>
+          <sphereGeometry args={[0.06, 12, 8]} />
+          <meshStandardMaterial 
+            color="#ff0000" 
+            emissive="#ff0000"
+            emissiveIntensity={0.2}
+            wireframe={isSelected}
+          />
+        </mesh>
+      </group>
+    )
+  }
+
+  // Road with lane markings
+  if (object.type === 'road') {
+    return (
+      <group
+        ref={actualMeshRef as any}
+        position={object.position}
+        rotation={object.rotation}
+        scale={object.scale}
+        onClick={onSelect}
+      >
+        {/* Main Road Surface */}
+        <mesh rotation={[-Math.PI / 2, 0, 0]}>
+          <planeGeometry args={[20, 4, 32, 8]} />
+          <meshStandardMaterial 
+            color={object.material.color || '#333333'}
+            metalness={object.material.metalness || 0}
+            roughness={object.material.roughness || 0.8}
+            emissive={object.material.emissive}
+            emissiveIntensity={object.material.emissiveIntensity}
+            map={texture}
+            wireframe={isSelected}
+          />
+        </mesh>
+        
+        {/* Lane Markings */}
+        {!isSelected && [...Array(10)].map((_, i) => (
+          <mesh 
+            key={i} 
+            position={[-8 + i * 1.8, 0.005, 0]} 
+            rotation={[-Math.PI / 2, 0, 0]}
+          >
+            <planeGeometry args={[0.8, 0.15]} />
+            <meshStandardMaterial 
+              color="#ffffff"
+              emissive="#ffffff"
+              emissiveIntensity={0.1}
+            />
+          </mesh>
+        ))}
+        
+        {/* Road Edges */}
+        <mesh position={[0, 0.005, 2.1]} rotation={[-Math.PI / 2, 0, 0]}>
+          <planeGeometry args={[20, 0.2]} />
+          <meshStandardMaterial color="#ffffff" emissive="#ffffff" emissiveIntensity={0.1} />
+        </mesh>
+        <mesh position={[0, 0.005, -2.1]} rotation={[-Math.PI / 2, 0, 0]}>
+          <planeGeometry args={[20, 0.2]} />
+          <meshStandardMaterial color="#ffffff" emissive="#ffffff" emissiveIntensity={0.1} />
         </mesh>
       </group>
     )
@@ -870,6 +1106,42 @@ export default function Editor3D() {
               >
                 <Mountain className="h-4 w-4 mr-2" />
                 Ground
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="w-full justify-start"
+                onClick={() => addObject('house')}
+              >
+                <Home className="h-4 w-4 mr-2" />
+                House
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="w-full justify-start"
+                onClick={() => addObject('mountain')}
+              >
+                <Mountain className="h-4 w-4 mr-2" />
+                Mountain
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="w-full justify-start"
+                onClick={() => addObject('car')}
+              >
+                <Car className="h-4 w-4 mr-2" />
+                Car
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="w-full justify-start"
+                onClick={() => addObject('road')}
+              >
+                <Route className="h-4 w-4 mr-2" />
+                Road
               </Button>
             </div>
           </div>
