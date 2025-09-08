@@ -34,8 +34,12 @@ import SkyControls, { SkySettings } from './SkyControls'
 import FirstPersonControls from './FirstPersonControls'
 import SceneExporter from './SceneExporter'
 import { CollapsibleSection } from './CollapsibleSection'
+import { AnimationControls, AnimationKeyframe, ObjectAnimation } from './AnimationControls'
+import { BasicPlayer, Knight, Wizard, Robot } from './PlayerModels'
+import EnhancedExporter from './EnhancedExporter'
+import { ShaderPresets } from './ShaderPresets'
 
-type ObjectType = 'cube' | 'sphere' | 'cylinder' | 'cone' | 'torus' | 'plane' | 'tree' | 'ground' | 'house' | 'mountain' | 'car' | 'road'
+type ObjectType = 'cube' | 'sphere' | 'cylinder' | 'cone' | 'torus' | 'plane' | 'tree' | 'ground' | 'house' | 'mountain' | 'car' | 'road' | 'player' | 'knight' | 'wizard' | 'robot'
 type TransformMode = 'translate' | 'rotate' | 'scale'
 
 interface SceneObject {
@@ -45,6 +49,7 @@ interface SceneObject {
   rotation: [number, number, number]
   scale: [number, number, number]
   material: MaterialProperties
+  animations?: string[] // IDs of animations applied to this object
 }
 
 function SceneObject({ 
@@ -111,6 +116,11 @@ function SceneObject({
         return <boxGeometry args={[2, 2, 2]} />
       case 'mountain':
         return <sphereGeometry args={[3, 16, 16]} />
+      case 'player':
+      case 'knight':
+      case 'wizard':
+      case 'robot':
+        return <boxGeometry args={[1, 1, 1]} /> // Placeholder, actual models rendered separately
       default:
         return <boxGeometry args={[1, 1, 1]} />
     }
@@ -475,6 +485,60 @@ function SceneObject({
           <planeGeometry args={[20, 0.2]} />
           <meshStandardMaterial color="#ffffff" emissive="#ffffff" emissiveIntensity={0.1} />
         </mesh>
+      </group>
+    )
+  }
+
+  // Player models
+  if (object.type === 'player') {
+    return (
+      <group onClick={onSelect}>
+        <BasicPlayer
+          position={object.position}
+          rotation={object.rotation}
+          scale={object.scale}
+          color={object.material.color}
+          isSelected={isSelected}
+        />
+      </group>
+    )
+  }
+
+  if (object.type === 'knight') {
+    return (
+      <group onClick={onSelect}>
+        <Knight
+          position={object.position}
+          rotation={object.rotation}
+          scale={object.scale}
+          isSelected={isSelected}
+        />
+      </group>
+    )
+  }
+
+  if (object.type === 'wizard') {
+    return (
+      <group onClick={onSelect}>
+        <Wizard
+          position={object.position}
+          rotation={object.rotation}
+          scale={object.scale}
+          isSelected={isSelected}
+        />
+      </group>
+    )
+  }
+
+  if (object.type === 'robot') {
+    return (
+      <group onClick={onSelect}>
+        <Robot
+          position={object.position}
+          rotation={object.rotation}
+          scale={object.scale}
+          isSelected={isSelected}
+        />
       </group>
     )
   }
@@ -848,6 +912,10 @@ export default function Editor3D() {
   const [currentCameraPosition, setCurrentCameraPosition] = useState<[number, number, number]>([5, 5, 5])
   const [currentCameraTarget, setCurrentCameraTarget] = useState<[number, number, number]>([0, 0, 0])
   
+  // Object animation state
+  const [animations, setAnimations] = useState<ObjectAnimation[]>([])
+  const [playingAnimations, setPlayingAnimations] = useState<Record<string, boolean>>({})
+  
   // Control mode state
   const [controlMode, setControlMode] = useState<'orbit' | 'firstperson'>('orbit')
   
@@ -897,12 +965,12 @@ export default function Editor3D() {
   }
   
   // Camera animation functions
-  const handleAddKeyframe = useCallback((keyframe: Omit<CameraKeyframe, 'id'>) => {
+  const handleAddCameraKeyframe = useCallback((keyframe: Omit<CameraKeyframe, 'id'>) => {
     const id = Date.now().toString()
     setKeyframes(prev => [...prev, { ...keyframe, id }])
   }, [])
 
-  const handleDeleteKeyframe = useCallback((id: string) => {
+  const handleDeleteCameraKeyframe = useCallback((id: string) => {
     setKeyframes(prev => prev.filter(kf => kf.id !== id))
   }, [])
 
@@ -910,13 +978,13 @@ export default function Editor3D() {
     setKeyframes(newKeyframes)
   }, [])
 
-  const handlePlayAnimation = useCallback(() => {
+  const handlePlayCameraAnimation = useCallback(() => {
     if (keyframes.length >= 2) {
       setIsAnimating(true)
     }
   }, [keyframes.length])
 
-  const handleStopAnimation = useCallback(() => {
+  const handleStopCameraAnimation = useCallback(() => {
     setIsAnimating(false)
   }, [])
 
@@ -949,10 +1017,80 @@ export default function Editor3D() {
     setSkySettings(newSkySettings)
   }, [])
   
+  // Animation functions
+  const handleAddAnimation = useCallback((animation: Omit<ObjectAnimation, 'id'>) => {
+    const id = Date.now().toString() + Math.random().toString(36).substr(2, 9)
+    setAnimations(prev => [...prev, { ...animation, id }])
+  }, [])
+
+  const handleDeleteAnimation = useCallback((id: string) => {
+    setAnimations(prev => prev.filter(anim => anim.id !== id))
+    setPlayingAnimations(prev => {
+      const newState = { ...prev }
+      delete newState[id]
+      return newState
+    })
+  }, [])
+
+  const handleUpdateAnimation = useCallback((id: string, updates: Partial<ObjectAnimation>) => {
+    setAnimations(prev => prev.map(anim => 
+      anim.id === id ? { ...anim, ...updates } : anim
+    ))
+  }, [])
+
+  const handlePlayAnimation = useCallback((id: string) => {
+    setPlayingAnimations(prev => ({ ...prev, [id]: true }))
+    // In a real implementation, this would trigger the animation
+    setTimeout(() => {
+      setPlayingAnimations(prev => ({ ...prev, [id]: false }))
+    }, 2000)
+  }, [])
+
+  const handleStopAnimation = useCallback((id: string) => {
+    setPlayingAnimations(prev => ({ ...prev, [id]: false }))
+  }, [])
+
+  const handleAddKeyframe = useCallback((animationId: string, keyframe: Omit<AnimationKeyframe, 'id'>) => {
+    const keyframeId = Date.now().toString() + Math.random().toString(36).substr(2, 9)
+    setAnimations(prev => prev.map(anim => 
+      anim.id === animationId 
+        ? { ...anim, keyframes: [...anim.keyframes, { ...keyframe, id: keyframeId }] }
+        : anim
+    ))
+  }, [])
+
+  const handleDeleteKeyframe = useCallback((animationId: string, keyframeId: string) => {
+    setAnimations(prev => prev.map(anim => 
+      anim.id === animationId 
+        ? { ...anim, keyframes: anim.keyframes.filter(kf => kf.id !== keyframeId) }
+        : anim
+    ))
+  }, [])
+
+  const handleUpdateKeyframe = useCallback((animationId: string, keyframeId: string, updates: Partial<AnimationKeyframe>) => {
+    setAnimations(prev => prev.map(anim => 
+      anim.id === animationId 
+        ? { 
+            ...anim, 
+            keyframes: anim.keyframes.map(kf => 
+              kf.id === keyframeId ? { ...kf, ...updates } : kf
+            ) 
+          }
+        : anim
+    ))
+  }, [])
+  
   // Import function
   const handleImportObjects = useCallback((importedObjects: SceneObject[]) => {
     setObjects(prev => [...prev, ...importedObjects.map(obj => ({
       ...obj,
+      id: Date.now().toString() + Math.random().toString(36).substr(2, 9) // Generate new IDs
+    }))])
+  }, [])
+
+  const handleImportAnimations = useCallback((importedAnimations: ObjectAnimation[]) => {
+    setAnimations(prev => [...prev, ...importedAnimations.map(anim => ({
+      ...anim,
       id: Date.now().toString() + Math.random().toString(36).substr(2, 9) // Generate new IDs
     }))])
   }, [])
@@ -1079,20 +1217,42 @@ export default function Editor3D() {
                 <Car className="h-4 w-4 mr-2" />
                 Car
               </Button>
-              <Button variant="outline" size="sm" className="w-full justify-start" onClick={() => addObject('road')}>
-                <Route className="h-4 w-4 mr-2" />
-                Road
-              </Button>
-            </div>
-          </CollapsibleSection>
+                <Button variant="outline" size="sm" className="w-full justify-start" onClick={() => addObject('road')}>
+                  <Route className="h-4 w-4 mr-2" />
+                  Road
+                </Button>
+              </div>
+            </CollapsibleSection>
+
+            {/* Player Models Section */}
+            <CollapsibleSection title="Player Models" icon={<Navigation className="h-4 w-4" />}>
+              <div className="space-y-2 p-4">
+                <Button variant="outline" size="sm" className="w-full justify-start" onClick={() => addObject('player')}>
+                  <Navigation className="h-4 w-4 mr-2" />
+                  Basic Player
+                </Button>
+                <Button variant="outline" size="sm" className="w-full justify-start" onClick={() => addObject('knight')}>
+                  <Navigation className="h-4 w-4 mr-2" />
+                  Knight
+                </Button>
+                <Button variant="outline" size="sm" className="w-full justify-start" onClick={() => addObject('wizard')}>
+                  <Navigation className="h-4 w-4 mr-2" />
+                  Wizard
+                </Button>
+                <Button variant="outline" size="sm" className="w-full justify-start" onClick={() => addObject('robot')}>
+                  <Navigation className="h-4 w-4 mr-2" />
+                  Robot
+                </Button>
+              </div>
+            </CollapsibleSection>
 
           <CollapsibleSection title="Camera Controls" icon={<Eye className="h-4 w-4" />}>
             <div className="p-4">
               <CameraControls
-                onAddKeyframe={handleAddKeyframe}
-                onDeleteKeyframe={handleDeleteKeyframe}
-                onPlayAnimation={handlePlayAnimation}
-                onStopAnimation={handleStopAnimation}
+                onAddKeyframe={handleAddCameraKeyframe}
+                onDeleteKeyframe={handleDeleteCameraKeyframe}
+                onPlayAnimation={handlePlayCameraAnimation}
+                onStopAnimation={handleStopCameraAnimation}
                 onJumpToKeyframe={handleJumpToKeyframe}
                 onReorderKeyframes={handleReorderKeyframes}
                 keyframes={keyframes}
@@ -1142,16 +1302,52 @@ export default function Editor3D() {
                 </div>
               )}
             </div>
-          </CollapsibleSection>
+            </CollapsibleSection>
 
-          <CollapsibleSection title="Import/Export" icon={<Upload className="h-4 w-4" />}>
-            <div className="p-4">
-              <SceneExporter
-                objects={objects}
-                onImportObjects={handleImportObjects}
-              />
-            </div>
-          </CollapsibleSection>
+            {/* Object Animation Section */}
+            <CollapsibleSection title="Object Animation" icon={<RotateCcw className="h-4 w-4" />}>
+              <div className="p-4">
+                <AnimationControls
+                  selectedObjectId={selectedObjectId}
+                  animations={animations}
+                  onAddAnimation={handleAddAnimation}
+                  onDeleteAnimation={handleDeleteAnimation}
+                  onUpdateAnimation={handleUpdateAnimation}
+                  onPlayAnimation={handlePlayAnimation}
+                  onStopAnimation={handleStopAnimation}
+                  isPlaying={playingAnimations}
+                  onAddKeyframe={handleAddKeyframe}
+                  onDeleteKeyframe={handleDeleteKeyframe}
+                  onUpdateKeyframe={handleUpdateKeyframe}
+                  currentObjectTransform={selectedObject ? {
+                    position: selectedObject.position,
+                    rotation: selectedObject.rotation,
+                    scale: selectedObject.scale
+                  } : undefined}
+                />
+              </div>
+            </CollapsibleSection>
+
+            {/* Enhanced Shader Presets */}
+            <CollapsibleSection title="Material Presets" icon={<Circle className="h-4 w-4" />}>
+              <div className="p-4">
+                <ShaderPresets
+                  onApplyPreset={handleMaterialChange}
+                  currentMaterial={materialProperties}
+                />
+              </div>
+            </CollapsibleSection>
+
+            <CollapsibleSection title="Import/Export" icon={<Upload className="h-4 w-4" />}>
+              <div className="p-4">
+                <EnhancedExporter
+                  objects={objects}
+                  animations={animations}
+                  onImportObjects={handleImportObjects}
+                  onImportAnimations={handleImportAnimations}
+                />
+              </div>
+            </CollapsibleSection>
 
           {/* Material Editor - Only show when object is selected */}
           {selectedObject && (
