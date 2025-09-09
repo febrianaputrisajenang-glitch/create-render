@@ -1142,7 +1142,12 @@ export default function Editor3D() {
         {/* Left Collapsible Sidebar */}
         <div className="w-80 bg-card border-r border-border overflow-y-auto">
           {/* Collapsible Navigation Sections */}
-          <CollapsibleSection title="Transform Tools" icon={<Move className="h-4 w-4" />} defaultOpen>
+          <CollapsibleSection 
+            title="Transform Tools" 
+            icon={<Move className="h-4 w-4" />} 
+            isOpen={openSection === 'transform'}
+            onToggle={() => handleSectionToggle('transform')}
+          >
             <div className="grid grid-cols-3 gap-2 p-4">
               <Button
                 variant={transformMode === 'translate' ? 'default' : 'outline'}
@@ -1351,7 +1356,12 @@ export default function Editor3D() {
 
           {/* Material Editor - Only show when object is selected */}
           {selectedObject && (
-            <CollapsibleSection title="Material Editor" icon={<Circle className="h-4 w-4" />} defaultOpen>
+            <CollapsibleSection 
+              title="Material Editor" 
+              icon={<Circle className="h-4 w-4" />} 
+              isOpen={openSection === 'material'}
+              onToggle={() => handleSectionToggle('material')}
+            >
               <div className="p-4">
                 <MaterialEditor
                   materialProperties={materialProperties}
